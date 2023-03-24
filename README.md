@@ -1,5 +1,5 @@
 # giga-analytica
-Submit the Jupyter notebook/Lab and HTML file with answers to all the questions
+This is a Jupyter notebook/Lab exploring and analyzing online retail data.
 
 
 Business Objective
