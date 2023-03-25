@@ -1,0 +1,109 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import datetime as dt
+import warnings
+
+warnings.filterwarnings("ignore")
+sns.set_style("whitegrid")
+
+# Data Import
+df = pd.read_csv(r'C:\Users\Pc\Downloads\Online Retail data.csv', encoding='cp1252')
+
+
+# Data Overview
+df.head()
+
+# Data Cleaning
+df = df.dropna(subset=['InvoiceNo'])
+df['Description'] = df['Description'].str.strip()
+df = df[~df['InvoiceNo'].str.contains('C')]
+df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'], format='%m/%d/%Y %H:%M')
+df['InvoiceYearMonth'] = df['InvoiceDate'].dt.strftime('%Y-%m')
+df = df[df['UnitPrice'] > 0]
+df = df[df['Quantity'] > 0]
+
+# Exploratory analysis
+# Monthly Revenue
+monthly_revenue = df.groupby(['InvoiceYearMonth'])['TotalRevenue'].sum().reset_index()
+plt.figure(figsize=(12, 6))
+sns.lineplot(x='InvoiceYearMonth', y='TotalRevenue', data=monthly_revenue)
+plt.title('Monthly Revenue')
+plt.xlabel('Month')
+plt.ylabel('Revenue')
+plt.xticks(rotation=45)
+plt.show()
+
+# Monthly Active Customers
+monthly_active = df.groupby(['InvoiceYearMonth'])['CustomerID'].nunique().reset_index()
+plt.figure(figsize=(12, 6))
+sns.lineplot(x='InvoiceYearMonth', y='CustomerID', data=monthly_active)
+plt.title('Monthly Active Customers')
+plt.xlabel('Month')
+plt.ylabel('Number of Customers')
+plt.xticks(rotation=45)
+plt.show()
+
+# Monthly Order Count
+monthly_order_count = df.groupby(['InvoiceYearMonth'])['InvoiceNo'].nunique().reset_index()
+plt.figure(figsize=(12, 6))
+sns.lineplot(x='InvoiceYearMonth', y='InvoiceNo', data=monthly_order_count)
+plt.title('Monthly Order Count')
+plt.xlabel('Month')
+plt.ylabel('Number of Orders')
+plt.xticks(rotation=45)
+plt.show()
+
+# New vs Existing Customers
+df['CustomerType'] = np.where(df['InvoiceYearMonth'] != df.groupby(['CustomerID'])['InvoiceYearMonth'].transform('min'), 'Existing', 'New')
+monthly_order_type = df.groupby(['InvoiceYearMonth', 'CustomerType'])['InvoiceNo'].nunique().reset_index()
+plt.figure(figsize=(12, 6))
+sns.lineplot(x='InvoiceYearMonth', y='InvoiceNo', hue='CustomerType', data=monthly_order_type)
+plt.title('New vs Existing Customers')
+plt.xlabel('Month')
+plt.ylabel('Number of Orders')
+plt.xticks(rotation=45)
+plt.show()
+
+# Country of Origin
+plt.figure(figsize=(12, 6))
+sns.countplot(x='Country', data=df, order=df['Country'].value_counts().iloc[:10].index)
+plt.title('Country of Origin')
+plt.xlabel('Country')
+plt.ylabel('Number of Orders')
+plt.xticks(rotation=45)
+plt.show()
+
+# How many repeat customers
+repeat_customers = df[df['CustomerType'] == 'Existing'].groupby(['CustomerID'])['InvoiceNo'].nunique()
+plt.figure(figsize=(12, 6))
+sns.histplot(data=repeat_customers, bins=50)
+plt.title('Number of Repeat Customers')
+plt.xlabel('Number of Orders')
+plt.ylabel('Number of Customers')
+plt.show()
+
+# Product with most repeat customers
+repeat_products = df[df['CustomerType'] == 'Existing'].groupby(['StockCode'])['InvoiceNo'].nunique().sort_values
+
+
+# Step 1: Group the data by 'StockCode' and 'CustomerID'
+grouped_data = df.groupby(['StockCode', 'CustomerID'])
+
+# Step 2: Count the number of unique dates for each customer and each product
+counts = grouped_data['InvoiceDate'].nunique()
+
+# Step 3: Filter out the customers who have made only one purchase for each product
+filtered_counts = counts[counts > 1]
+
+# Step 4: Group the remaining data by 'StockCode' and count the number of unique customers for each product
+unique_customers = filtered_counts.groupby('StockCode').count()
+
+# Step 5: Find the product with the highest count of unique customers
+max_customers = unique_customers.max()
+max_product = unique_customers[unique_customers == max_customers].index[0]
+
+# Get the 'Description' of the product with the highest count of unique customers
+description = df[df['StockCode'] == max_product]['Description'].iloc[0]
+
